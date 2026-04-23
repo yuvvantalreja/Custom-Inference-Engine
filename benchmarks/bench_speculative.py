@@ -18,8 +18,10 @@ def run(max_new_tokens: int = 64, device: str = "auto") -> None:
     use_cuda = (device == "cuda") or (device == "auto" and torch.cuda.is_available())
     dev = torch.device("cuda" if use_cuda else "cpu")
 
-    cfg = ModelConfig(vocab_size=128, hidden_size=32, num_layers=4, num_heads=4,
-                      num_kv_heads=4, max_position_embeddings=128, intermediate_size=64)
+    # head_dim must be >= 16 for the Triton tl.dot path on sm_75 (Turing).
+    cfg = ModelConfig(vocab_size=128, hidden_size=256, num_layers=4, num_heads=4,
+                      num_kv_heads=4, head_dim=64, max_position_embeddings=128,
+                      intermediate_size=512)
 
     def fresh_cache():
         return PagedKVCache(KVCacheConfig(

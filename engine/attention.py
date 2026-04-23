@@ -16,6 +16,8 @@ def _triton_eligible(q: torch.Tensor) -> bool:
     D = q.shape[-1]
     if D & (D - 1):  # non-power-of-2 head_dim
         return False
+    if D < 16:  # Triton tl.dot requires K >= 16 on sm_75
+        return False
     if q.dtype != torch.float16:
         return False
     return True
