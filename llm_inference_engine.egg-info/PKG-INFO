@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: llm-inference-engine
+Version: 0.1.0
+Summary: Custom-kernel LLM inference engine with INT8 quantization and speculative decoding
+Requires-Python: >=3.11
+Requires-Dist: torch>=2.1
+Requires-Dist: numpy>=1.24
+Provides-Extra: gpu
+Requires-Dist: triton>=2.1; extra == "gpu"
+Provides-Extra: tokenizer
+Requires-Dist: tokenizers>=0.15; extra == "tokenizer"
+Provides-Extra: dev
+Requires-Dist: pytest>=7; extra == "dev"
+Requires-Dist: pytest-xdist; extra == "dev"

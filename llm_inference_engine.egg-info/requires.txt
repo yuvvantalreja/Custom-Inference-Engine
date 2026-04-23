@@ -1,0 +1,12 @@
+torch>=2.1
+numpy>=1.24
+
+[dev]
+pytest>=7
+pytest-xdist
+
+[gpu]
+triton>=2.1
+
+[tokenizer]
+tokenizers>=0.15
