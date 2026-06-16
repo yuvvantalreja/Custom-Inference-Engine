@@ -66,6 +66,9 @@ class InferenceEngine:
         if self.draft is not None and self._draft_cache is None:
             self._draft_cache = self._make_cache(self.draft)
 
+    def _get_cache_stats(self) -> None:
+        self._target_cache.stats()
+
     def generate(
         self,
         prompt: str,

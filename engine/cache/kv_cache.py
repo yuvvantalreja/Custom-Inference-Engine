@@ -192,3 +192,23 @@ class PagedKVCache:
             self._free_block(bid)
         table.blocks[needed:] = []
         table.length = new_length
+
+    def stats(self):
+        # Initial KV cache size
+        size = self.cfg.bytes_required()
+        total_blocks = self.cfg.num_blocks
+        # free'd blocks
+        free_blocks = len(self._free)
+        
+        # alloc'd blocks
+        alloc_blocks = total_blocks - free_blocks
+
+        print(f"Cache Memory Footprint: {size}")
+        print(f"Total Blocks: {total_blocks}")
+        print(f"Allocated Blocks: {alloc_blocks}")
+        print(f"Freed Blocks: {free_blocks}")
+        
+        
+
+        
+

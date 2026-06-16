@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=1.24",
     "transformers>=5.12.1",
     "pytest>=9.0.3",
+    "accelerate>=1.14.0",
 ]
 
 [project.optional-dependencies]

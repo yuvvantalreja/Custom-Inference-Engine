@@ -109,8 +109,8 @@ def load_hf(
     """
     from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
-    # dev = require_cuda(device)
-    dev = 'cpu'
+    dev = require_cuda(device)
+    # dev = 'cpu'
     act_dtype = activation_dtype(dev)
 
     hf_cfg = AutoConfig.from_pretrained(name)
@@ -131,13 +131,9 @@ def load_hf(
         name,
         torch_dtype=act_dtype,
         low_cpu_mem_usage=True,
-        cache_dir="weights"
+        cache_dir="weights/",
+        device_map="auto"
     )
-
-    print(f"{hf_model}")
-
-    for name, _ in hf_model.named_modules(): # every submodule path
-        print(f"{name}")
 
     copy_hf_weights(hf_model, engine)
     del hf_model
