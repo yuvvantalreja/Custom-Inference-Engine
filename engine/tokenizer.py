@@ -1,7 +1,7 @@
 """Minimal tokenizer abstraction.
 
-Real deployments would wrap HuggingFace ``tokenizers`` or sentencepiece. For
-testability without external deps we provide ``CharTokenizer`` which maps
+Real deployments wrap HuggingFace tokenizers or sentencepiece. For
+testability without external deps we provide CharTokenizer which maps
 single characters to ids — good enough for round-trip tests.
 """
 
@@ -38,7 +38,33 @@ class CharTokenizer:
         return [self._char_to_id[c] for c in text if c in self._char_to_id]
 
     def decode(self, ids: list[int]) -> str:
-        return "".join(self._id_to_char.get(i, "") for i in ids if i != self.pad_id and i != self.eos_id)
+        return "".join(
+            self._id_to_char.get(i, "")
+            for i in ids
+            if i != self.pad_id and i != self.eos_id
+        )
+
+    def decode_incremental(self, ids: list[int], prev_text: str) -> str:
+        full = self.decode(ids)
+        return full[len(prev_text) :]
+
+
+class HFTokenizer:
+    """Thin wrapper around a HuggingFace PreTrainedTokenizer."""
+
+    def __init__(self, tok):
+        self._tok = tok
+        self.vocab_size = int(getattr(tok, "vocab_size", len(tok.get_vocab())))
+        eos = tok.eos_token_id
+        if eos is None:
+            raise ValueError("HF tokenizer must define eos_token_id")
+        self.eos_id = int(eos)
+
+    def encode(self, text: str) -> list[int]:
+        return list(self._tok.encode(text, add_special_tokens=False))
+
+    def decode(self, ids: list[int]) -> str:
+        return self._tok.decode(ids, skip_special_tokens=True)
 
     def decode_incremental(self, ids: list[int], prev_text: str) -> str:
         full = self.decode(ids)

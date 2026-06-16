@@ -1,6 +1,9 @@
+import pytest
 import torch
 
 from engine.model.norm import RMSNorm
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_rmsnorm_unit_input():

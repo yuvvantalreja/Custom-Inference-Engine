@@ -14,8 +14,8 @@ class KVCacheConfig:
     head_dim: int
     num_blocks: int
     block_size: int
-    dtype: torch.dtype = torch.float32
-    device: torch.device | str = "cpu"
+    dtype: torch.dtype = torch.float16
+    device: torch.device | str = "cuda"
 
     def bytes_required(self) -> int:
         """Total VRAM footprint across all layers and K+V."""
@@ -36,8 +36,8 @@ class PagedKVCache:
 
     Layout per layer: K, V tensors of shape
         (num_blocks, block_size, num_kv_heads, head_dim).
-    Sequences own a ``BlockTable`` that maps logical positions to physical
-    block ids. ``fork`` copies a sequence's K/V into freshly allocated blocks
+    Sequences own a BlockTable that maps logical positions to physical
+    block ids. fork copies a sequence's K/V into freshly allocated blocks
     so speculative rejection can roll back without disturbing the parent.
     """
 
@@ -49,12 +49,18 @@ class PagedKVCache:
             need = cfg.bytes_required()
             if need > free:
                 raise RuntimeError(
-                    f"PagedKVCache would need {need/2**30:.2f} GiB but only "
-                    f"{free/2**30:.2f} GiB free on {device}"
+                    f"PagedKVCache would need {need / 2**30:.2f} GiB but only "
+                    f"{free / 2**30:.2f} GiB free on {device}"
                 )
         shape = (cfg.num_blocks, cfg.block_size, cfg.num_kv_heads, cfg.head_dim)
-        self.k = [torch.zeros(shape, dtype=cfg.dtype, device=device) for _ in range(cfg.num_layers)]
-        self.v = [torch.zeros(shape, dtype=cfg.dtype, device=device) for _ in range(cfg.num_layers)]
+        self.k = [
+            torch.zeros(shape, dtype=cfg.dtype, device=device)
+            for _ in range(cfg.num_layers)
+        ]
+        self.v = [
+            torch.zeros(shape, dtype=cfg.dtype, device=device)
+            for _ in range(cfg.num_layers)
+        ]
         self._free: list[int] = list(range(cfg.num_blocks))
 
     @property
@@ -105,7 +111,7 @@ class PagedKVCache:
 
         Writes span one or two blocks per call in the common case (L <=
         block_size). For long prefills we walk blocks and do one slice
-        assignment per block — ``ceil(L/block_size)+1`` copies total, not L.
+        assignment per block — ceil(L/block_size)+1 copies total, not L.
         """
         L = k.shape[0]
         assert v.shape[0] == L
@@ -132,11 +138,13 @@ class PagedKVCache:
         if end > table.length:
             table.length = end
 
-    def gather(self, layer: int, table: BlockTable) -> tuple[torch.Tensor, torch.Tensor]:
+    def gather(
+        self, layer: int, table: BlockTable
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Gather the full K/V for a sequence into dense (L, Hk, D) tensors.
 
-        Single ``index_select`` across the block table, then a reshape + slice
-        to ``L`` — one allocation and one copy instead of per-block ``cat``.
+        Single index_select across the block table, then a reshape + slice
+        to L — one allocation and one copy instead of per-block cat.
         """
         L = table.length
         if L == 0:
@@ -144,17 +152,25 @@ class PagedKVCache:
             empty = self.k[layer].new_zeros(shape)
             return empty, empty.clone()
         idx = torch.tensor(table.blocks, device=self.device, dtype=torch.long)
-        k = self.k[layer].index_select(0, idx).reshape(-1, self.cfg.num_kv_heads, self.cfg.head_dim)[:L]
-        v = self.v[layer].index_select(0, idx).reshape(-1, self.cfg.num_kv_heads, self.cfg.head_dim)[:L]
+        k = (
+            self.k[layer]
+            .index_select(0, idx)
+            .reshape(-1, self.cfg.num_kv_heads, self.cfg.head_dim)[:L]
+        )
+        v = (
+            self.v[layer]
+            .index_select(0, idx)
+            .reshape(-1, self.cfg.num_kv_heads, self.cfg.head_dim)[:L]
+        )
         return k, v
 
     # --- speculative fork/rollback ---
 
     def fork(self, table: BlockTable) -> BlockTable:
-        """Return a new BlockTable whose K/V are a deep copy of ``table``'s.
+        """Return a new BlockTable whose K/V are a deep copy of table's.
 
-        One ``index_copy_`` per layer across all source→dest blocks, instead
-        of ``num_blocks × num_layers`` separate copies.
+        One index_copy_ per layer across all source→dest blocks, instead
+        of num_blocks × num_layers separate copies.
         """
         n = len(table.blocks)
         new_blocks = [self._alloc_block() for _ in range(n)]
@@ -164,10 +180,12 @@ class PagedKVCache:
             for layer in range(self.cfg.num_layers):
                 self.k[layer].index_copy_(0, dst, self.k[layer].index_select(0, src))
                 self.v[layer].index_copy_(0, dst, self.v[layer].index_select(0, src))
-        return BlockTable(block_size=self.cfg.block_size, blocks=new_blocks, length=table.length)
+        return BlockTable(
+            block_size=self.cfg.block_size, blocks=new_blocks, length=table.length
+        )
 
     def rollback(self, table: BlockTable, new_length: int) -> None:
-        """Free blocks made unnecessary by truncating to ``new_length``."""
+        """Free blocks made unnecessary by truncating to new_length."""
         assert new_length <= table.length
         needed = table.num_blocks_needed(new_length)
         for bid in table.blocks[needed:]:

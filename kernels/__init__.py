@@ -1,7 +1,7 @@
-"""Custom kernels.
+"""Custom CUDA kernels backed by Triton.
 
-Triton kernels are only importable when CUDA + Triton are available.
-The reference implementations in ``kernels.ref`` are always importable.
+Reference implementations live in kernels.ref for correctness checks.
+Production kernel entry points require CUDA at runtime.
 """
 
 from __future__ import annotations
@@ -10,14 +10,14 @@ import importlib
 
 import torch
 
-_TRITON_AVAILABLE = False
-try:
-    if torch.cuda.is_available():
+
+def require_triton() -> None:
+    """Verify CUDA and Triton are available before running a kernel."""
+    if not torch.cuda.is_available():
+        raise RuntimeError("CUDA is required but not available")
+    try:
         importlib.import_module("triton")
-        _TRITON_AVAILABLE = True
-except Exception:
-    _TRITON_AVAILABLE = False
-
-
-def triton_available() -> bool:
-    return _TRITON_AVAILABLE
+    except ImportError as e:
+        raise RuntimeError(
+            "Triton is required. Install with: pip install triton"
+        ) from e

@@ -1,6 +1,9 @@
+import pytest
 import torch
 
 from engine.decode.sampler import Sampler, greedy_sample
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_greedy_sample():

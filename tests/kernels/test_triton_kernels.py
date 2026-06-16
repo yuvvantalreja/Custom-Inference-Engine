@@ -1,15 +1,16 @@
-"""Triton kernel correctness tests vs reference. GPU-only; skipped on CPU."""
+"""Triton kernel correctness tests vs reference."""
 
 import pytest
 import torch
 
-cuda_only = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
+from kernels.ref import flash_attention_ref, int8_matmul_ref
+
+triton = pytest.importorskip("triton")
 
 
-@cuda_only
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 def test_flash_attention_matches_reference():
     from kernels.flash_attention import flash_attention
-    from kernels.ref import flash_attention_ref
 
     torch.manual_seed(0)
     B, H, Lq, Lk, D = 2, 4, 64, 64, 64
@@ -21,10 +22,9 @@ def test_flash_attention_matches_reference():
     assert (out - ref).abs().max() < 1e-3
 
 
-@cuda_only
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 def test_int8_matmul_matches_reference():
     from kernels.int8_matmul import int8_matmul
-    from kernels.ref import int8_matmul_ref
 
     torch.manual_seed(0)
     M, N, K = 64, 128, 64
@@ -32,10 +32,10 @@ def test_int8_matmul_matches_reference():
     scales = (w_fp.abs().amax(dim=1) / 127.0).clamp_min(1e-8)
     w_int8 = (w_fp / scales.unsqueeze(-1)).round().clamp(-128, 127).to(torch.int8)
 
-    x = torch.randn(M, K, dtype=torch.float16).cuda()
+    x = torch.randn(M, K, dtype=torch.float16, device="cuda")
     w_int8 = w_int8.cuda()
     scales_cu = scales.cuda().to(torch.float16)
 
     y = int8_matmul(x, w_int8, scales_cu)
-    ref = int8_matmul_ref(x.cpu(), w_int8.cpu(), scales_cu.cpu()).cuda()
+    ref = int8_matmul_ref(x, w_int8, scales_cu)
     assert (y - ref).abs().max() < 1e-3

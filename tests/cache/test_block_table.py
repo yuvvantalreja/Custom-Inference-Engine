@@ -1,4 +1,8 @@
+import pytest
+
 from engine.cache.block_table import BlockTable
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_logical_to_physical():

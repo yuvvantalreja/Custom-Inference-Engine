@@ -1,6 +1,9 @@
+import pytest
 import torch
 
 from kernels.ref import build_rope_cache, apply_rotary_ref
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_rope_zero_position_identity():

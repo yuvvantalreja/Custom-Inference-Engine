@@ -1,5 +1,7 @@
 torch>=2.1
 numpy>=1.24
+transformers>=5.12.1
+pytest>=9.0.3
 
 [dev]
 pytest>=7

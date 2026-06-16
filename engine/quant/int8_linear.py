@@ -4,12 +4,6 @@ import torch
 import torch.nn as nn
 
 from engine.quant.calibrate import calibrate_weight
-from kernels.ref import int8_matmul_ref
-
-try:
-    from kernels.int8_matmul import int8_matmul as _int8_matmul_triton
-except Exception:  # Triton import path may fail on CPU-only envs
-    _int8_matmul_triton = None
 
 
 class Int8Linear(nn.Module):
@@ -41,9 +35,10 @@ class Int8Linear(nn.Module):
         return mod
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if x.is_cuda and _int8_matmul_triton is not None:
-            return _int8_matmul_triton(x, self.weight_int8, self.scales, bias=self.bias)
-        return int8_matmul_ref(x, self.weight_int8, self.scales, bias=self.bias)
+        if not x.is_cuda:
+            raise RuntimeError("Int8Linear forward requires CUDA tensors")
+        from kernels.int8_matmul import int8_matmul
+        return int8_matmul(x, self.weight_int8, self.scales, bias=self.bias)
 
 
 def quantize_linear(linear: nn.Linear) -> Int8Linear:

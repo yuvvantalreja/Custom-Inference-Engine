@@ -41,8 +41,14 @@ class EngineConfig:
     max_seq_len: int = 2048
     kv_block_size: int = 16
     num_kv_blocks: int = 1024
-    device: str = "cpu"
+    device: str = "cuda"
     dtype: str = "float16"  # activation dtype
+
+    def __post_init__(self) -> None:
+        if not str(self.device).startswith("cuda"):
+            raise ValueError(
+                f"GPU-only engine: device must be a CUDA device, got {self.device!r}"
+            )
 
 
 @dataclass

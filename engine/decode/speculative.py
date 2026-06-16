@@ -1,12 +1,12 @@
 """Speculative decoding (Leviathan et al. 2023).
 
-The draft proposes ``gamma`` tokens autoregressively. The target verifies all
-``gamma`` positions in a single forward pass, then accepts the longest prefix
+The draft proposes gamma tokens autoregressively. The target verifies all
+gamma positions in a single forward pass, then accepts the longest prefix
 per the Leviathan rejection rule. On rejection, the target's KV cache is
 rolled back to the last accepted position so future steps stay consistent.
 
-In greedy mode (``temperature == 0``), acceptance reduces to: keep tokens while
-``argmax(target_logits) == draft_token``. This gives exactness vs. the base
+In greedy mode (temperature == 0), acceptance reduces to: keep tokens while
+argmax(target_logits) == draft_token. This gives exactness vs. the base
 loop when draft == target.
 """
 
@@ -29,7 +29,7 @@ def _draft_propose(
     gamma: int,
     device,
 ) -> tuple[list[int], list[torch.Tensor]]:
-    """Advance the draft by ``gamma`` tokens greedily. Returns tokens + logits."""
+    """Advance the draft by gamma tokens greedily. Returns tokens + logits."""
     proposed: list[int] = []
     logits_list: list[torch.Tensor] = []
     t = torch.tensor([[last_token]], device=device, dtype=torch.long)
@@ -55,9 +55,9 @@ def speculative_generate(
     sampler: Sampler | None = None,
     stop_tokens: set[int] | None = None,
 ) -> Iterator[int]:
-    """Greedy speculative decoding. ``sampler`` is reserved for future temperature
+    """Greedy speculative decoding. sampler is reserved for future temperature
     support but this implementation is greedy-only — with draft == target it
-    produces exactly the same sequence as ``base_loop.generate``."""
+    produces exactly the same sequence as base_loop.generate."""
 
     assert sampler is None or sampler.temperature == 0.0, "only greedy speculative supported in v1"
     device = next(target.parameters()).device

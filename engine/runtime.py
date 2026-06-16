@@ -11,6 +11,7 @@ from engine.config import EngineConfig, ModelConfig, SpecConfig
 from engine.decode.base_loop import generate
 from engine.decode.sampler import Sampler
 from engine.decode.speculative import speculative_generate
+from engine.device import require_cuda
 from engine.dtype import activation_dtype, as_device, kv_cache_dtype
 from engine.model import TransformerLM, build_draft, build_target
 from engine.quant import Int8Linear
@@ -18,8 +19,8 @@ from engine.stream import TokenStreamer
 from engine.tokenizer import Tokenizer
 
 
-def _cast_non_quantized_params(model: nn.Module, dtype: torch.dtype) -> None:
-    """Cast everything except Int8Linear INT8 weights to ``dtype``.
+def cast_non_quantized_params(model: nn.Module, dtype: torch.dtype) -> None:
+    """Cast everything except Int8Linear INT8 weights to dtype.
 
     INT8 weights stay INT8; their FP16 scales/bias are re-cast too.
     """
@@ -105,18 +106,21 @@ def build_engine(
     tokenizer: Tokenizer,
     draft_cfg: ModelConfig | None = None,
     spec_cfg: SpecConfig | None = None,
+    target: TransformerLM | None = None,
 ) -> InferenceEngine:
-    device = as_device(engine_cfg.device)
-    if device.type == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("engine_cfg.device='cuda' but CUDA is not available")
+    device = require_cuda(engine_cfg.device)
 
-    target = build_target(model_cfg).to(device)
+    if target is None:
+        target = build_target(model_cfg).to(device)
+    else:
+        target = target.to(device)
+
     draft = build_draft(model_cfg, draft_cfg).to(device) if draft_cfg is not None else None
 
     act_dtype = activation_dtype(device)
-    _cast_non_quantized_params(target, act_dtype)
+    cast_non_quantized_params(target, act_dtype)
     if draft is not None:
-        _cast_non_quantized_params(draft, act_dtype)
+        cast_non_quantized_params(draft, act_dtype)
 
     return InferenceEngine(
         target=target, tokenizer=tokenizer, engine_cfg=engine_cfg,

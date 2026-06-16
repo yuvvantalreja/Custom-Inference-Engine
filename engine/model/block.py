@@ -55,13 +55,23 @@ class Attention(nn.Module):
 
         # Append this step's k,v to the cache, then gather the full history.
         write_start = int(positions[0].item())
-        cache.append(layer_idx, table, k[0].transpose(0, 1), v[0].transpose(0, 1), start=write_start)
+        cache.append(
+            layer_idx,
+            table,
+            k[0].transpose(0, 1),
+            v[0].transpose(0, 1),
+            start=write_start,
+        )
         full_k, full_v = cache.gather(layer_idx, table)  # (N, Hk, D)
         full_k = full_k.transpose(0, 1).unsqueeze(0)  # (1, Hk, N, D)
         full_v = full_v.transpose(0, 1).unsqueeze(0)
 
-        out = flash_attention(q, full_k, full_v, causal=True, scale=1.0 / math.sqrt(self.head_dim))
-        out = out.transpose(1, 2).contiguous().view(B, L, self.num_heads * self.head_dim)
+        out = flash_attention(
+            q, full_k, full_v, causal=True, scale=1.0 / math.sqrt(self.head_dim)
+        )
+        out = (
+            out.transpose(1, 2).contiguous().view(B, L, self.num_heads * self.head_dim)
+        )
         return self.o_proj(out)
 
 

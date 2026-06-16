@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.no_cuda
+
+
 def test_import_version():
     import engine
     assert engine.__version__ == "0.1.0"

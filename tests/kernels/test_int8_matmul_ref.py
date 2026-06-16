@@ -1,6 +1,9 @@
+import pytest
 import torch
 
 from kernels.ref import int8_matmul_ref, dequantize_int8
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_per_channel_roundtrip_close():

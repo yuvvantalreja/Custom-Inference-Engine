@@ -1,5 +1,9 @@
+import pytest
+
 from engine.stream import TokenStreamer
 from engine.tokenizer import CharTokenizer
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_incremental_matches_batch():

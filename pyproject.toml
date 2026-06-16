@@ -5,11 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "llm-inference-engine"
 version = "0.1.0"
-description = "Custom-kernel LLM inference engine with INT8 quantization and speculative decoding"
+description = "GPU-first LLM inference engine with Triton kernels, INT8 quantization, and speculative decoding"
 requires-python = ">=3.11"
 dependencies = [
     "torch>=2.1",
     "numpy>=1.24",
+    "transformers>=5.12.1",
+    "pytest>=9.0.3",
 ]
 
 [project.optional-dependencies]
@@ -23,3 +25,7 @@ include = ["engine*", "kernels*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "no_cuda: tests that do not require a GPU",
+    "integration: tests that download or run against HuggingFace checkpoints",
+]

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import torch
 
+from engine.device import require_cuda
+
 
 def activation_dtype(device: torch.device) -> torch.dtype:
-    """FP16 on CUDA, FP32 on CPU. T4 has no bf16 tensor cores."""
-    if device.type == "cuda":
-        return torch.float16
-    return torch.float32
+    """FP16 activations on CUDA. T4 has no bf16 tensor cores."""
+    # require_cuda(device)
+    return torch.float16
 
 
 def kv_cache_dtype(device: torch.device) -> torch.dtype:
@@ -24,7 +25,7 @@ def weight_storage_dtype() -> torch.dtype:
 
 
 def as_device(device: str | torch.device) -> torch.device:
-    return torch.device(device) if isinstance(device, str) else device
+    return require_cuda(device)
 
 
 def validate_dtype(dtype: torch.dtype | str) -> torch.dtype:

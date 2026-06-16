@@ -5,6 +5,8 @@ import torch
 
 from kernels.ref import flash_attention_ref
 
+pytestmark = pytest.mark.no_cuda
+
 
 @pytest.mark.parametrize("B,H,Lq,Lk,D", [(1, 2, 4, 4, 8), (2, 4, 8, 16, 16)])
 def test_matches_manual_softmax(B, H, Lq, Lk, D):

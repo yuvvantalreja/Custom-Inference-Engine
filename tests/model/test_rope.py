@@ -1,6 +1,9 @@
+import pytest
 import torch
 
 from engine.model.rope import RotaryEmbedding
+
+pytestmark = pytest.mark.no_cuda
 
 
 def test_rope_module_identity_at_zero():
